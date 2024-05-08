@@ -5,10 +5,10 @@ This bot is intended to help track fear and action tokens for the Daggerheart ta
 [![Demo video](https://img.youtube.com/vi/jGKoqW8o6iM/0.jpg)](https://www.youtube.com/watch?v=jGKoqW8o6iM)
 
 ### Dependencies
-Running this bot will require:
+Running this bot requires:
 * [python](https://www.python.org/) (3.8 or higher)
 * [discord.py](https://discordpy.readthedocs.io/en/stable/) 
-    * can be installed using pip, e.g `pip install discord.py`
+    * Can be installed using pip, e.g `pip install discord.py`
 
 ## Setup
 * Follow [this](https://discordpy.readthedocs.io/en/stable/discord.html) guide to create the bot and add it to your server.
@@ -19,7 +19,7 @@ Running this bot will require:
     * Use Slash Commands
 * Add your bot's secret token into the config.json file. Make sure to never share your bot's token publically.
 * Add your server's id into the config.json file.
-    * You can find your server id by enabling developer mode in your discord settings, right-clicking your server's icon, and selecting 'Copy Server ID'.
+    * You can find your server id by enabling developer mode in your discord settings, right-clicking the server's icon, and selecting 'Copy Server ID'.
 * Your bot should be ready to run now!
 
 ## Running the Bot
