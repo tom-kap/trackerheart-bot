@@ -3,11 +3,12 @@ from abc import ABC, abstractmethod
 
 # TRACKER CLASSES
 class TrackerModel:
-    def __init__(self, starting_val: int =0):  
-        self.num_tokens = starting_val
+    def __init__(self, starting_val=0, max_val=100):  
+        self.num_tokens = min(starting_val, max_val)
+        self.max = max_val
 
     def tick_up(self, amount=1):
-        self.num_tokens = self.num_tokens + amount
+        self.num_tokens = min(self.max, self.num_tokens + amount)
     
     def tick_down(self, amount=1):
         self.num_tokens = max(self.num_tokens - amount, 0)
@@ -37,8 +38,8 @@ class Tracker(ABC):
         pass
     
     # initialize variables
-    def __init__(self, starting_val: int=0):
-        self.model = TrackerModel(starting_val=starting_val)
+    def __init__(self, starting_val=0, max_val=100):
+        self.model = TrackerModel(starting_val=starting_val, max_val=max_val)
         self.active = False
         self.reactions = False
 
@@ -88,76 +89,6 @@ class Tracker(ABC):
         return embed
 
 
-class ActionTracker(Tracker):
-    name = "Action Tracker"
-    
-    token = "⚡"
-
-    buttons  = {
-        "add": "⬆️",
-        "remove": "⬇️",
-        "add2": "⏫",
-        "remove2": "⏬",
-        "end": "❌"
-    }
-
-    # updates model based on discord reactions
-    async def reaction_added(self, reaction: discord.Reaction, user: discord.User):
-        if self.active:
-            emoji = reaction.emoji
-            if emoji == self.buttons["add2"]:
-                self.model.tick_up(amount=2)
-                await reaction.remove(user)
-            elif emoji == self.buttons["remove2"]:
-                self.model.tick_down(amount=2)
-                await reaction.remove(user)
-            elif emoji == self.buttons["add"]:
-                self.model.tick_up()
-                await reaction.remove(user)
-            elif emoji == self.buttons["remove"]:
-                    self.model.tick_down()
-                    await reaction.remove(user)
-            elif emoji == self.buttons["end"]:
-                    self.active = False
-        await self.update()
-            
-    
-class FearTracker(Tracker):
-    name = "Fear Tokens"
-    
-    token = "💀"
-
-    buttons = {
-        "add": "⬆️",
-        "remove": "⬇️",
-        "end": "❌"
-    }
-
-    # updates model based on discord reactions
-    async def reaction_added(self, reaction: discord.Reaction, user: discord.User):
-        if self.active:
-            emoji = reaction.emoji
-            if emoji == self.buttons["add"]:
-                self.model.tick_up()
-                await reaction.remove(user)
-            elif emoji == self.buttons["remove"]:
-                    self.model.tick_down()
-                    await reaction.remove(user)
-            elif emoji == self.buttons["end"]:
-                    self.active = False
-        await self.update()
-
-    # creates an embed representing the current state of the tracker
-    def gen_embed(self):
-        embed = super().gen_embed()
-        embed.add_field(
-            name="Spending Fear",
-            value="When you spend fear, you can:\n* Interrupt the PCs during combat to take an action.\n* Add two tokens to the action tracker.\n* Use an adversary's fear move.\n* Use an environment move.",
-            inline=False
-        )
-        return embed
-
-
 class SessionTracker(Tracker):
     class CombatTracker(Tracker):
         name = "Action Tracker"
@@ -179,7 +110,6 @@ class SessionTracker(Tracker):
 
         async def message_init(self, channel: discord.TextChannel):
             self.message = await channel.send(embed = self.gen_embed())
-            self.active = True
 
         # updates model based on discord reactions
         async def reaction_added(self, reaction: discord.Reaction, user: discord.User):
@@ -247,8 +177,8 @@ class SessionTracker(Tracker):
     }
 
     # initialize variables
-    def __init__(self, starting_fear=0):
-        super().__init__(starting_val=starting_fear)
+    def __init__(self, starting_fear):
+        super().__init__(starting_val=starting_fear, max_val=6)
     
     # initializes and sends out the tracker message
     # must be called after initializing
@@ -287,6 +217,7 @@ class SessionTracker(Tracker):
     async def end_session(self):
         await self.combat_tracker.end_combat()
         self.active = False
+        await self.update()
 
     def in_combat(self):
         return self.combat_tracker.active
