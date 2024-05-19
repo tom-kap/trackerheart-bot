@@ -31,6 +31,10 @@ Running this bot requires:
 * `/session_start` => Begins the tracker.
     * `starting_fear` is an optional argument that allows you to specify how much fear to start the session with.
 * `/session_end` => Ends the tracker.
+* `/create_timer` => Creates a timer
+    * `timer_name` Required argument to specify a name for the timer
+        * You can have multiple timers, but each must have an unique name
+    * `starting_time` Required argument to specify how many tokens the timer starts with.
 * Currently, this bot only supports tracking one session at a time.
 ### Fear Tracker
 * React with ⬆️ to add a fear token.
@@ -42,3 +46,10 @@ Running this bot requires:
 * React with ⬇️ to remove an action token.
 * React with ⚡ to automatically convert 1 fear token into 2 action tokens.
 * React with 💀 to automatically convert 2 action tokens into 1 fear token.
+### Timer Tracker
+* React with ⬆️ to add a time token.
+* React with ⬇️ to remove a time token.
+* React with ⏏️ to add 5 time tokens.
+* React with 0️⃣ to clear all time tokens.
+* React with 🔁 to reset tracker to the starting amount of time tokens specified in `/create_timer`.
+* React with ⏹️ to stop/remove time tracker(this deletes the given time tracker from the bot).
