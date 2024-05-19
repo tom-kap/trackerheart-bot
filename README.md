@@ -17,6 +17,7 @@ Running this bot requires:
     * Manage Messages
     * Add Reactions
     * Use Slash Commands
+* Enable "server members intent" in the Bot tab as well.
 * Add your bot's secret token into the config.json file. Make sure to never share your bot's token publically.
 * Add your server's id into the config.json file.
     * You can find your server id by enabling developer mode in your discord settings, right-clicking the server's icon, and selecting 'Copy Server ID'.
