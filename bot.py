@@ -1,5 +1,6 @@
 import json
 import discord
+import re # regex
 from discord import app_commands
 from typing import Optional
 from trackers import SessionTracker
@@ -76,26 +77,43 @@ async def session_end(interaction: discord.Interaction):
 # update trackers when reacted to
 @client.event
 async def on_reaction_add(reaction, user):
-    global session_tracker
-    if session_tracker is not None:
-        if reaction.message.id == session_tracker.get_id() and user.id != client.user.id:
-            await session_tracker.reaction_added(reaction=reaction, user=user)
-        elif session_tracker.in_combat() and reaction.message.id == session_tracker.get_combat_id() and user.id != client.user.id:
-            await session_tracker.combat_tracker.reaction_added(reaction=reaction, user=user)
-        elif session_tracker.in_timer() and session_tracker.is_timer_id(reaction.message.id) and user.id != client.user.id:
-            timer_tracker = session_tracker.get_timer_tracker(reaction.message.id)
-            await timer_tracker.reaction_added(reaction=reaction, user=user)
-        if not session_tracker.active:
-            session_tracker = None
-
+    try:
+        global session_tracker
+        if session_tracker is not None:
+            if reaction.message.id == session_tracker.get_id() and user.id != client.user.id:
+                await session_tracker.reaction_added(reaction=reaction, user=user)
+            elif session_tracker.in_combat() and reaction.message.id == session_tracker.get_combat_id() and user.id != client.user.id:
+                await session_tracker.combat_tracker.reaction_added(reaction=reaction, user=user)
+            elif session_tracker.in_timer() and session_tracker.is_timer_id(reaction.message.id) and user.id != client.user.id:
+                timer_tracker = session_tracker.get_timer_tracker(reaction.message.id)
+                await timer_tracker.reaction_added(reaction=reaction, user=user)
+            if not session_tracker.active:
+                session_tracker = None
+    
+    except discord.errors.HTTPException as e:
+        print(f"Caught an HTTP exception: Status code {e.status}")
+        print(f"Error text: {e.text}")
+        # Sometimes communcation with discord through the webhook(s) fails. 
+        # The current solution is to treat exceptions as a soft error and press on.
+        # This stops the bot from locking up and allows the user to try again.
+        pass
+    
 # update trackers when reaction is removed
 @client.event
 async def on_reaction_remove(reaction, user):
-    global session_tracker
-    if session_tracker is not None:
-        if reaction.message.id == session_tracker.get_id() and user.id != client.user.id:
-            await session_tracker.reaction_removed(reaction=reaction, user=user)
-
+    try:
+        global session_tracker
+        if session_tracker is not None:
+            if reaction.message.id == session_tracker.get_id() and user.id != client.user.id:
+                await session_tracker.reaction_removed(reaction=reaction, user=user)
+    except discord.errors.HTTPException as e:
+        print(f"Caught an HTTP exception: Status code {e.status}")
+        print(f"Error text: {e.text}")
+        # Sometimes communcation with discord through the webhook(s) fails. 
+        # The current solution is to treat exceptions as a soft error and press on.
+        # This stops the bot from locking up and allows the user to try again.
+        pass
+    
 # sync commands to discord
 @client.event
 async def on_ready():
