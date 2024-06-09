@@ -1,10 +1,10 @@
 import json
 import discord
 import re # regex
+from discord.ext import tasks
 from discord import app_commands
 from typing import Optional
 from trackers import SessionTracker
-
 
 with open("config.json") as f:
     config = json.load(f)
@@ -18,7 +18,10 @@ intents.members = True
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
+
+
 session_tracker = None
+
 
 # /session_start
 @tree.command(
@@ -91,12 +94,10 @@ async def on_reaction_add(reaction, user):
                 session_tracker = None
     
     except discord.errors.HTTPException as e:
+        # Sometimes communcation with discord through the webhook(s) fails. 
         print(f"Caught an HTTP exception: Status code {e.status}")
         print(f"Error text: {e.text}")
-        # Sometimes communcation with discord through the webhook(s) fails. 
-        # The current solution is to treat exceptions as a soft error and press on.
-        # This stops the bot from locking up and allows the user to try again.
-        pass
+        
     
 # update trackers when reaction is removed
 @client.event
@@ -107,17 +108,30 @@ async def on_reaction_remove(reaction, user):
             if reaction.message.id == session_tracker.get_id() and user.id != client.user.id:
                 await session_tracker.reaction_removed(reaction=reaction, user=user)
     except discord.errors.HTTPException as e:
+        # Sometimes communcation with discord through the webhook(s) fails. 
         print(f"Caught an HTTP exception: Status code {e.status}")
         print(f"Error text: {e.text}")
-        # Sometimes communcation with discord through the webhook(s) fails. 
-        # The current solution is to treat exceptions as a soft error and press on.
-        # This stops the bot from locking up and allows the user to try again.
-        pass
+        
     
 # sync commands to discord
 @client.event
 async def on_ready():
     await tree.sync(guild=discord.Object(id=SERVER_ID))
     print("Trackerheart is ready to go!")
+    if not heartbeat.is_running():
+        print("Calling heartbeat starter")
+        await heartbeat.start()
+
+
+@tasks.loop(minutes=1)
+async def heartbeat():
+    # You can perform any activity here to ensure the bot stays active.
+    await client.change_presence(activity=discord.Game(name="Daggerheart"))
+
+@heartbeat.before_loop
+async def before_heartbeat():
+    await client.wait_until_ready()
+    print('Heartbeat task is starting...')
+
 
 client.run(BOT_TOKEN)
