@@ -270,8 +270,9 @@ class SessionTracker(Tracker):
     # must be called after initializing
     async def message_init(self, interaction: discord.Interaction):
         self.active = True
-        await interaction.response.send_message(embed=self.gen_embed())
-        self.message = await interaction.original_response()
+        await interaction.response.send_message("Starting tracker...",ephemeral=True)
+        msg = await interaction.original_response()
+        self.message = await msg.channel.send(embed = self.gen_embed())
 
         self.combat_tracker = SessionTracker.CombatTracker(session=self)
         await self.combat_tracker.message_init(channel=self.message.channel)
