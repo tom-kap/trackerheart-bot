@@ -6,7 +6,6 @@ class TrackerModel:
     def __init__(self, starting_val=0, max_val=100):  
         self.num_tokens = min(starting_val, max_val)
         self.max = max_val
-
     def tick_up(self, amount=1):
         self.num_tokens = min(self.max, self.num_tokens + amount)
     
@@ -90,6 +89,94 @@ class Tracker(ABC):
 
 
 class SessionTracker(Tracker):
+    class TimerTracker(Tracker):
+        name = "Timer"
+        
+        token = "⏳"
+        # t1 = timer1, idea is to allow multiple timers i.e. an enemy battle timer & a long rest project timer.
+        buttons = {
+            "add": "⬆️",
+            "remove": "⬇️",
+            "add5": "⏏️",
+            "clear": "0️⃣",
+            "loop": "🔁",
+            "stop": "⏹️"
+        }
+        # init vars
+        def __init__(self, session,tname,stime=0):
+            self.session = session 
+            self.name = tname
+            self.tokens = stime
+            self.init_tokens = stime
+            # for compadability with abstract class
+            self.prev_num_tokens: int = None
+            super().__init__(starting_val=stime)
+
+
+        async def message_init(self, interaction: discord.Interaction):
+            self.active = True
+            await interaction.response.send_message("Starting timer...",ephemeral=True)
+            self.message = await interaction.channel.send(embed = self.gen_embed())
+            
+            await self.set_reactions()
+
+        async def reaction_added(self, reaction: discord.Reaction, user: discord.User):    
+            if self.active:
+                emoji = reaction.emoji
+              
+                match(emoji):
+                    case "⬆️":
+                        if self.session.model.num_tokens <= 20:
+                            self.model.tick_up()
+                        await reaction.remove(user)
+                    case "⏏️":
+                        if self.session.model.num_tokens <= 20:
+                            for i in range(0,5):
+                                self.model.tick_up()
+                        await reaction.remove(user)
+                    case "0️⃣":
+                        if self.model.num_tokens > 0:
+                            self.model.reset()
+                        await reaction.remove(user)
+                    case "⬇️":
+                        if self.model.num_tokens > 0:
+                            self.model.tick_down()
+                        await reaction.remove(user)
+                    case "🔁":
+                        self.model.num_tokens = self.init_tokens
+                        await reaction.remove(user)
+                    case "⏹️":
+                        await reaction.remove(user)
+                        await self.end_timer()
+                    case _:
+                        print("Caseless reaction")
+            await self.update()    
+
+        # creates an embed representing the current state of the tracker
+        def gen_embed(self):
+            colour = discord.Colour.dark_orange()
+            if self.active:
+                return super().gen_embed(colour=colour)
+            else:
+                embed = discord.Embed(title=f"Timer {self.name}", colour=colour)
+                embed.add_field(name=f"Timer {self.name}", value=f"Timer Stopped")
+                return embed
+            
+        # start timer
+        async def start_timer(self):
+            if not self.active:
+                self.active = True
+            await self.update()
+
+        # end combat
+        async def end_timer(self):
+            if self.active:
+                self.active = False
+                self.session.remove_timer((self.name))
+                self.model.reset()
+            await self.update()
+
+
     class CombatTracker(Tracker):
         name = "Action Tracker"
         
@@ -163,9 +250,7 @@ class SessionTracker(Tracker):
                 else:
                     embed.add_field(name="Out of Combat", value="\u200b")
                 return embed
-
-    
-
+            
     name = "Fear Tokens"
 
     token = "💀"
@@ -173,7 +258,7 @@ class SessionTracker(Tracker):
     buttons = {
         "add": "⬆️",
         "remove": "⬇️",
-        "combat": "⚔️"
+        "combat": "⚔️",
     }
 
     # initialize variables
@@ -184,13 +269,24 @@ class SessionTracker(Tracker):
     # must be called after initializing
     async def message_init(self, interaction: discord.Interaction):
         self.active = True
-        await interaction.response.send_message(embed=self.gen_embed())
-        self.message = await interaction.original_response()
+        await interaction.response.send_message("Starting tracker...",ephemeral=True)
+        self.message = await interaction.channel.send(embed = self.gen_embed())
 
         self.combat_tracker = SessionTracker.CombatTracker(session=self)
         await self.combat_tracker.message_init(channel=self.message.channel)
 
+        # dictionary to store timer
+        self.timers = {}
+        
         await self.set_reactions()
+        
+    async def create_timer(self, timer_name, starting_time, interaction: discord.Interaction):
+        # if timer name is not unique
+        if timer_name in self.timers:
+            await interaction.response.send_message(content="timer name is already in use, please pick another", ephemeral=True)
+        else:
+            self.timers[timer_name] = SessionTracker.TimerTracker(session=self,tname=timer_name,stime=starting_time)
+            await (self.timers[timer_name]).message_init(interaction)
 
     # updates model based on discord reactions
     async def reaction_added(self, reaction: discord.Reaction, user: discord.User):
@@ -204,6 +300,8 @@ class SessionTracker(Tracker):
                 await reaction.remove(user)
             elif emoji == self.buttons["combat"]:
                 await self.combat_tracker.start_combat()
+
+ 
         await self.update()
             
     # updates model when a reaction is removed
@@ -224,7 +322,31 @@ class SessionTracker(Tracker):
 
     def get_combat_id(self):
         return self.combat_tracker.get_id()
-        
+    
+    def in_timer(self):
+        for t in self.timers:
+            t = self.timers[t]
+            if t.active == True:
+                return True
+        return False
+
+    def is_timer_id(self, msg_id):
+        for t in self.timers:
+            t = self.timers[t]
+            if t.active == True and t.get_id() == msg_id:
+                return True
+        return False
+    
+    def get_timer_tracker(self,msg_id):
+        for t in self.timers:
+            t = self.timers[t]
+            if t.active == True and t.get_id() == msg_id:
+                return t
+    
+    def remove_timer(self,tname):
+        if tname in self.timers:
+            del self.timers[tname]
+         
     # creates an embed representing the current state of the tracker
     def gen_embed(self):
         embed = super().gen_embed(colour=discord.Colour.blurple())
