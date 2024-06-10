@@ -251,6 +251,7 @@ class SessionTracker(Tracker):
                     embed.add_field(name="Out of Combat", value="\u200b")
                 return embed
             
+            
     name = "Fear Tokens"
 
     token = "💀"
@@ -258,6 +259,7 @@ class SessionTracker(Tracker):
     buttons = {
         "add": "⬆️",
         "remove": "⬇️",
+        "combat": "⚔️",
         "combat": "⚔️",
     }
 
@@ -274,6 +276,10 @@ class SessionTracker(Tracker):
 
         self.combat_tracker = SessionTracker.CombatTracker(session=self)
         await self.combat_tracker.message_init(channel=self.message.channel)
+
+        # dictionary to store timer
+        self.timers = {}
+        
 
         # dictionary to store timer
         self.timers = {}
@@ -302,6 +308,8 @@ class SessionTracker(Tracker):
                 await self.combat_tracker.start_combat()
 
  
+
+ 
         await self.update()
             
     # updates model when a reaction is removed
@@ -322,6 +330,31 @@ class SessionTracker(Tracker):
 
     def get_combat_id(self):
         return self.combat_tracker.get_id()
+    
+    def in_timer(self):
+        for t in self.timers:
+            t = self.timers[t]
+            if t.active == True:
+                return True
+        return False
+
+    def is_timer_id(self, msg_id):
+        for t in self.timers:
+            t = self.timers[t]
+            if t.active == True and t.get_id() == msg_id:
+                return True
+        return False
+    
+    def get_timer_tracker(self,msg_id):
+        for t in self.timers:
+            t = self.timers[t]
+            if t.active == True and t.get_id() == msg_id:
+                return t
+    
+    def remove_timer(self,tname):
+        if tname in self.timers:
+            del self.timers[tname]
+         
     
     def in_timer(self):
         for t in self.timers:
